@@ -1,0 +1,19 @@
+name: host-process-scratch-image
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v2
+      - name: build image
+        run: |
+          .\New-HostProcessBaseImage.ps1

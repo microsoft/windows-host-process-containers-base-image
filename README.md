@@ -1,33 +1,61 @@
-# Project
+# HostProcess container base image
 
-> This repo has been populated by an initial template to help get you started. Please
-> make sure to update the content to build a great experience for community-building.
+## Overview
 
-As the maintainer of this project, please make a few updates:
+This project produces a minimal base image that can be used with [HostProcess containers](https://kubernetes.io/docs/tasks/configure-pod-container/create-hostprocess-pod/).
 
-- Improving this README.MD file to provide a great experience
-- Updating SUPPORT.MD with content about this project's support experience
-- Understanding the security reporting process in SECURITY.MD
-- Remove this section from the README
+This image *cannot* be used with any other type of Windows container (process isoalted, Hyper-V isolated, etc...)
 
-## Contributing
+### Benefits
 
-This project welcomes contributions and suggestions.  Most contributions require you to agree to a
-Contributor License Agreement (CLA) declaring that you have the right to, and actually do, grant us
-the rights to use your contribution. For details, visit https://cla.opensource.microsoft.com.
+Using this image as a base for HostProcess containers has a few advantages over using other base images for Windows containers including:
 
-When you submit a pull request, a CLA bot will automatically determine whether you need to provide
-a CLA and decorate the PR appropriately (e.g., status check, comment). Simply follow the instructions
-provided by the bot. You will only need to do this once across all repos using our CLA.
+- Size - This image is a few KB. Even the smallest official base image (NanoServer) is still a few hundred MB is size.
+- OS compatibility - HostProcess containers do not inherit the same [compatibility requirements](https://docs.microsoft.com/virtualization/windowscontainers/deploy-containers/version-compatibility) as Windows server containers and because of this it does not make sense to include all of the runtime / system binaries that make up the different base layers. Using this image allows for a single container image to be used on any Windows Server version which can greatly simplify container build processes.
 
-This project has adopted the [Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct/).
-For more information see the [Code of Conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq/) or
-contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additional questions or comments.
+## Usage
 
-## Trademarks
+Build your container from `TBD`.
 
-This project may contain trademarks or logos for projects, products, or services. Authorized use of Microsoft 
-trademarks or logos is subject to and must follow 
-[Microsoft's Trademark & Brand Guidelines](https://www.microsoft.com/en-us/legal/intellectualproperty/trademarks/usage/general).
-Use of Microsoft trademarks or logos in modified versions of this project must not cause confusion or imply Microsoft sponsorship.
-Any use of third-party trademarks or logos are subject to those third-party's policies.
+### Dockerfile example
+
+```yaml
+FROM `TBD`
+
+ADD hello-world.ps1 .
+
+ENV PATH="C:\Windows\system32;C:\Windows;C:\WINDOWS\System32\WindowsPowerShell\v1.0\;"
+ENTRYPOINT ["powershell.exe", "./hello-world.ps1"]
+```
+
+### Build with BuildKit
+
+Containers based on this image cannot currently be built with Docker Desktop.
+Instead use BuildKit or other tools.
+
+Example:
+
+#### Create a builder
+
+One time step
+
+```cmd
+docker buildx create --name img-builder --use --platform windows/amd64
+```
+
+#### Build your image
+
+Use the following command to build and push to a container reposity
+
+```cmd
+ docker buildx build --platform windows/amd64 --output=type=registry -f {Dockerfile} -t {ImageTag} .
+```
+
+## Licensing
+
+Code is the reposity is released under the `MIT` [license](/LICENSE).
+
+The container images produced by this reposity are distrubted under the `CC0` license.
+
+- [CC0 license](/cc0-license.txt)
+- [CC0 legacode](/cc0-legalcode.txt)
