@@ -4,7 +4,7 @@
 
 This project produces a minimal base image that can be used with [HostProcess containers](https://kubernetes.io/docs/tasks/configure-pod-container/create-hostprocess-pod/).
 
-This image *cannot* be used with any other type of Windows container (process isoalted, Hyper-V isolated, etc...)
+This image *cannot* be used with any other type of Windows container (process isolated, Hyper-V isolated, etc...)
 
 ### Benefits
 
@@ -45,7 +45,7 @@ docker buildx create --name img-builder --use --platform windows/amd64
 
 #### Build your image
 
-Use the following command to build and push to a container reposity
+Use the following command to build and push to a container repository
 
 ```cmd
  docker buildx build --platform windows/amd64 --output=type=registry -f {Dockerfile} -t {ImageTag} .
@@ -53,9 +53,9 @@ Use the following command to build and push to a container reposity
 
 ## Licensing
 
-Code is the reposity is released under the `MIT` [license](/LICENSE).
+Code is the repository is released under the `MIT` [license](/LICENSE).
 
-The container images produced by this reposity are distrubted under the `CC0` license.
+The container images produced by this repository are distributed under the `CC0` license.
 
 - [CC0 license](/cc0-license.txt)
 - [CC0 legacode](/cc0-legalcode.txt)
