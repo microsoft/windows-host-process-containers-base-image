@@ -15,7 +15,11 @@ Copy-item -Path "cc0-legalcode.txt" -Destination "build\layer\Files\cc0-legalcod
 
 # Create layer.tar
 Push-Location build\layer
-tar.exe -cf layer.tar Files
+if ($IsLinux) {
+    tar -cf layer.tar Files
+} else {
+    tar.exe -cf layer.tar Files
+}
 Pop-Location
 
 # Get hash of layer.tar
@@ -133,7 +137,12 @@ Move-Item -Path "build\image\config.json" -Destination "build\image\${configHash
 "@ | Out-File  -FilePath "build\image\manifest.json" -Encoding ascii
 
 # Tar the image
-tar.exe  -cf "build\host-process-scratch.tar" -C "build\image" .
+if ($IsLinux) {
+    tar  -cf "build/windows-host-process-containers-base-image.tar" -C "build/image" .
+}
+else {
+    tar.exe  -cf "build\windows-host-process-containers-base-image.tar" -C "build\image" .
+}
 
 # Output a file with the image hash so we can import/push the image from CI
 "${configHash}" | Out-File -FilePath "build\image-id.txt" -Encoding ascii  -NoNewline
