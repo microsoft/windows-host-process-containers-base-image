@@ -110,7 +110,6 @@ $now = [DateTime]::UtcNow.ToString("o")
         }
     ],
     "os": "windows",
-    "os.version": "10.0.17763.1",
     "rootfs": {
         "type": "layers",
         "diff_ids": [
