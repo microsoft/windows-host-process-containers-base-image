@@ -15,12 +15,20 @@ Using this image as a base for HostProcess containers has a few advantages over 
 
 ## Usage
 
-Build your container from `TBD`.
+Build your container from `mcr.microsoft.com/oss/kubernetes/windows-host-process-containers-base-image:v0.1.0`.
 
 ### Dockerfile example
 
-```yaml
-FROM `TBD`
+Create `hello-world.ps1` with the following content:
+
+```powershell
+Write-output "Hello World!"
+```
+
+and `Dockerfile.windows` with the following content:
+
+```Dockerfile
+FROM `mcr.microsoft.com/oss/kubernetes/windows-host-process-containers-base-image:v0.1.0`
 
 ADD hello-world.ps1 .
 
