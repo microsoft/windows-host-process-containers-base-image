@@ -15,7 +15,7 @@ Using this image as a base for HostProcess containers has a few advantages over 
 
 ## Usage
 
-Build your container from `mcr.microsoft.com/oss/kubernetes/windows-host-process-containers-base-image:v0.1.0`!
+Build your container from `mcr.microsoft.com/oss/kubernetes/windows-host-process-containers-base-image:v0.1.0`.
 
 ### Dockerfile example
 
