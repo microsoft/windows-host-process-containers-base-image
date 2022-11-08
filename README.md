@@ -59,6 +59,17 @@ Use the following command to build and push to a container repository
  docker buildx build --platform windows/amd64 --output=type=registry -f {Dockerfile} -t {ImageTag} .
 ```
 
+### Container Manifests
+
+As mentioned in [Benefits](#benefits) above, HostProcess containers can run on any Windows Server version however
+there is currently logic in containerd to only pull Windows container images if the `OSVersion` defined in the
+container manifest matches the `OSVersion` of the node.
+
+When building container images from this base image it is recommended to not include this image in a manifest-list
+and also not include *any* platform information in the manifest for now.
+
+Please see https://github.com/containerd/containerd/issues/7431 for more information.
+
 ## Licensing
 
 Code is the repository is released under the `MIT` [license](/LICENSE).
