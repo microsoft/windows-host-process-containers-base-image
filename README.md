@@ -15,7 +15,7 @@ Using this image as a base for HostProcess containers has a few advantages over 
 
 ## Building the base image
 
-Run [New-HostProcessBaseImage.ps1](./New-HostProcessBaseImage.ps1) from the repository root with PowerShell and `tar.exe` available:
+Run [New-HostProcessBaseImage.ps1](./New-HostProcessBaseImage.ps1) from the repository root with PowerShell and `tar` (`tar.exe` on Windows) available:
 
 ```powershell
 # AMD64 is the default, preserving existing builds.
