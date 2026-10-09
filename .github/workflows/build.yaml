@@ -12,8 +12,22 @@ on:
 jobs:
   build:
     runs-on: windows-2022
+    strategy:
+      matrix:
+        architecture: [amd64, arm64]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: build image
         run: |
-          .\New-HostProcessBaseImage.ps1
+          .\New-HostProcessBaseImage.ps1 -Architecture ${{ matrix.architecture }}
+      - name: validate image platform
+        run: |
+          $manifest = Get-Content "build\image\manifest.json" -Raw | ConvertFrom-Json
+          $config = Get-Content (Join-Path "build\image" $manifest[0].Config) -Raw | ConvertFrom-Json
+          $layerHash = $config.rootfs.diff_ids[0] -replace "^sha256:", ""
+          $layer = Get-Content "build\image\$layerHash\json" -Raw | ConvertFrom-Json
+          foreach ($metadata in @($config, $layer)) {
+              if ($metadata.os -ne "windows" -or $metadata.architecture -cne "${{ matrix.architecture }}") {
+                  throw "Unexpected image platform: $($metadata.os)/$($metadata.architecture)"
+              }
+          }

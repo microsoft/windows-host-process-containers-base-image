@@ -1,3 +1,10 @@
+param(
+    [ValidateSet("amd64", "arm64")]
+    [string]$Architecture = "amd64"
+)
+
+$Architecture = $Architecture.ToLowerInvariant()
+
 Remove-Item -Path "build" -Force -Recurse -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Path "build" | Out-Null
 New-Item -ItemType Directory -Path "build\layer" | Out-Null
@@ -97,7 +104,7 @@ $now = [DateTime]::UtcNow.ToString("o")
         "OnBuild": null,
         "Labels": null
     },
-    "architecture": "amd64",
+    "architecture": "$Architecture",
     "os": "windows"
 }
 "@ | Out-File -FilePath "build\image\${layerHash}\json" -Encoding ascii
@@ -106,7 +113,7 @@ $now = [DateTime]::UtcNow.ToString("o")
 # Create the image config and manifest files
 @"
 {
-    "architecture": "amd64",
+    "architecture": "$Architecture",
     "config": {
         "Hostname": "",
         "Domainname": "",
