@@ -1,10 +1,24 @@
-Remove-Item -Path "build" -Force -Recurse -ErrorAction SilentlyContinue
-New-Item -ItemType Directory -Path "build" | Out-Null
-New-Item -ItemType Directory -Path "build\layer" | Out-Null
+param(
+    [ValidateSet("amd64", "arm64")]
+    [string]$Architecture = "amd64"
+)
+
+$Architecture = $Architecture.ToLowerInvariant()
+
+$buildPath = Join-Path "build" $Architecture
+$imagePath = Join-Path $buildPath "image"
+$imageArchive = Join-Path "build" "windows-host-process-containers-base-image-$Architecture.tar"
+$imageIdPath = Join-Path "build" "image-id-$Architecture.txt"
+
+if (Test-Path -LiteralPath $buildPath) {
+    Remove-Item -LiteralPath $buildPath -Force -Recurse -ErrorAction Stop
+}
+New-Item -ItemType Directory -Path $buildPath -Force -ErrorAction Stop | Out-Null
+New-Item -ItemType Directory -Path "$buildPath\layer" | Out-Null
 
 # Create the files that ProcessBaseLayer on Windows validates when unpacking images.
 # On Windows Server 2025 and later, these must be valid registry hives, not empty files.
-New-Item -ItemType Directory -Path "build\layer\Files\Windows\System32\config" -Force | Out-Null
+New-Item -ItemType Directory -Path "$buildPath\layer\Files\Windows\System32\config" -Force | Out-Null
 
 Write-Host "`nCreating minimal registry hive files..." -ForegroundColor Cyan
 
@@ -23,7 +37,7 @@ $hives = @{
 }
 
 foreach ($name in $hives.Keys) {
-    $hivePath = Join-Path $PWD "build\layer\Files\Windows\System32\config\$name"
+    $hivePath = Join-Path $PWD "$buildPath\layer\Files\Windows\System32\config\$name"
     $bytes = [Convert]::FromBase64String($hives[$name])
     [System.IO.File]::WriteAllBytes($hivePath, $bytes)
     Write-Host "Created registry hive: $name ($($bytes.Length) bytes)" -ForegroundColor Green
@@ -31,26 +45,31 @@ foreach ($name in $hives.Keys) {
 
 
 # Add CC0 license to image.
-Copy-Item -Path "cc0-license.txt" -Destination "build\layer\Files\License.txt"
-Copy-Item -Path "cc0-legalcode.txt" -Destination "build\layer\Files\cc0-legalcode.txt"
+Copy-Item -Path "cc0-license.txt" -Destination "$buildPath\layer\Files\License.txt"
+Copy-Item -Path "cc0-legalcode.txt" -Destination "$buildPath\layer\Files\cc0-legalcode.txt"
 
 # Create layer.tar
-Push-Location build\layer
-if ($IsLinux) {
-    tar -cf layer.tar Files
-} else {
-    tar.exe -cf layer.tar Files
+Push-Location "$buildPath\layer"
+try {
+    if ($IsLinux) {
+        tar -cf layer.tar Files
+    } else {
+        tar.exe -cf layer.tar Files
+    }
+    if ($LASTEXITCODE -ne 0) {
+        throw "Failed to create the $Architecture image layer (tar exit code: $LASTEXITCODE)"
+    }
+} finally {
+    Pop-Location
 }
-Pop-Location
 
 # Get hash of layer.tar
-$layerHash = (Get-FileHash -Algorithm SHA256 "build\layer\layer.tar").Hash.ToLower()
+$layerHash = (Get-FileHash -Algorithm SHA256 "$buildPath\layer\layer.tar").Hash.ToLower()
 Write-Output "layer.tar hash: $layerHash"
 
-# Add json and VERSION files for layer
-New-Item -ItemType Directory -Path "build\image\${layerHash}" | Out-Null
-"2.0" | Out-File -FilePath "build\image\${layerHash}\VERSION" -Encoding ascii
-Copy-Item -Path "build\layer\layer.tar" -Destination "build\image\${layerHash}\layer.tar"
+# Add json file for layer
+New-Item -ItemType Directory -Path "$imagePath\${layerHash}" | Out-Null
+Copy-Item -Path "$buildPath\layer\layer.tar" -Destination "$imagePath\${layerHash}\layer.tar"
 
 $now = [DateTime]::UtcNow.ToString("o")
 @"
@@ -97,16 +116,16 @@ $now = [DateTime]::UtcNow.ToString("o")
         "OnBuild": null,
         "Labels": null
     },
-    "architecture": "amd64",
+    "architecture": "$Architecture",
     "os": "windows"
 }
-"@ | Out-File -FilePath "build\image\${layerHash}\json" -Encoding ascii
+"@ | Out-File -FilePath "$imagePath\${layerHash}\json" -Encoding ascii
 
 
 # Create the image config and manifest files
 @"
 {
-    "architecture": "amd64",
+    "architecture": "$Architecture",
     "config": {
         "Hostname": "",
         "Domainname": "",
@@ -142,9 +161,9 @@ $now = [DateTime]::UtcNow.ToString("o")
         ]
     }
 }
-"@ | Out-File -FilePath "build\image\config.json" -Encoding ascii
-$configHash = (Get-FileHash -Algorithm SHA256 "build\image\config.json").Hash.ToLower()
-Move-Item -Path "build\image\config.json" -Destination "build\image\${configHash}.json"
+"@ | Out-File -FilePath "$imagePath\config.json" -Encoding ascii
+$configHash = (Get-FileHash -Algorithm SHA256 "$imagePath\config.json").Hash.ToLower()
+Move-Item -Path "$imagePath\config.json" -Destination "$imagePath\${configHash}.json"
 
 @"
 [
@@ -155,15 +174,18 @@ Move-Item -Path "build\image\config.json" -Destination "build\image\${configHash
         ]
     }
 ]
-"@ | Out-File  -FilePath "build\image\manifest.json" -Encoding ascii
+"@ | Out-File  -FilePath "$imagePath\manifest.json" -Encoding ascii
 
 # Tar the image
 if ($IsLinux) {
-    tar -cf "build/windows-host-process-containers-base-image.tar" -C "build/image" .
+    tar -cf $imageArchive -C $imagePath .
 }
 else {
-    tar.exe -cf "build\windows-host-process-containers-base-image.tar" -C "build\image" .
+    tar.exe -cf $imageArchive -C $imagePath .
+}
+if ($LASTEXITCODE -ne 0) {
+    throw "Failed to create the $Architecture image archive (tar exit code: $LASTEXITCODE)"
 }
 
 # Output a file with the image hash so we can import/push the image from CI
-"${configHash}" | Out-File -FilePath "build\image-id.txt" -Encoding ascii -NoNewline
+"${configHash}" | Out-File -FilePath $imageIdPath -Encoding ascii -NoNewline
