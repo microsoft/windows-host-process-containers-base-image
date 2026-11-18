@@ -11,9 +11,33 @@ on:
 
 jobs:
   build:
-    runs-on: windows-2022
+    runs-on: windows-2025
+    strategy:
+      matrix:
+        architecture: [amd64, arm64]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: build image
         run: |
-          .\New-HostProcessBaseImage.ps1
+          .\New-HostProcessBaseImage.ps1 -Architecture ${{ matrix.architecture }}
+      - name: validate image platform
+        run: |
+          $imagePath = "build\${{ matrix.architecture }}\image"
+          $manifest = Get-Content "$imagePath\manifest.json" -Raw | ConvertFrom-Json
+          $configPath = Join-Path $imagePath $manifest[0].Config
+          $config = Get-Content $configPath -Raw | ConvertFrom-Json
+          $layerHash = $config.rootfs.diff_ids[0] -replace "^sha256:", ""
+          $layer = Get-Content "$imagePath\$layerHash\json" -Raw | ConvertFrom-Json
+          foreach ($metadata in @($config, $layer)) {
+              if ($metadata.os -ne "windows" -or $metadata.architecture -cne "${{ matrix.architecture }}") {
+                  throw "Unexpected image platform: $($metadata.os)/$($metadata.architecture)"
+              }
+          }
+          $archivePath = "build\windows-host-process-containers-base-image-${{ matrix.architecture }}.tar"
+          if (-not (Test-Path -LiteralPath $archivePath -PathType Leaf)) {
+              throw "Image archive not found: $archivePath"
+          }
+          $imageId = Get-Content "build\image-id-${{ matrix.architecture }}.txt" -Raw
+          if ($imageId -cne (Get-FileHash -Algorithm SHA256 $configPath).Hash.ToLowerInvariant()) {
+              throw "Image ID does not match the ${{ matrix.architecture }} image configuration"
+          }
